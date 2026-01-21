@@ -3,18 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>字符雨伞交互特效</title>
+    <title>字符雨伞交互特效-纤细版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden; /* 防止出现滚动条 */
-            background-color: #0a0a1e;
-        }
-        canvas {
-            display: block;
-        }
+        body { margin: 0; padding: 0; overflow: hidden; background-color: #0a0a1e; }
+        canvas { display: block; }
     </style>
 </head>
 <body>
@@ -24,12 +17,9 @@
 // 🎨 颜色配置
 // ==========================================
 const MY_COLORS = [
-  "#ADD8E6", // 浅蓝
-  "#87CEFA", // 淡天蓝
-  "#B0E0E6"  // 粉蓝
+  "#ADD8E6", "#87CEFA", "#B0E0E6"
 ];
 
-// --- 🔧 特效参数配置 ---
 const DROP_STYLE = 3; 
 const TRAIL_LENGTH = 10;    
 const DOT_GAP = 6;          
@@ -37,7 +27,6 @@ const SPLASH_COUNT = 8;
 const GRAVITY = 0.4;        
 const SHIELD_RADIUS = 70;   
 const BASE_MULTIPLIER = 1.3; 
-// --------------------
 
 let raindrops = [];
 let ripples = [];
@@ -45,7 +34,7 @@ let splashes = [];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  textFont('Verdana'); // 网页端 Verdana 兼容性更好且更厚实
+  textFont('Courier New'); // 换回 Courier New，这种字体不加粗时最有代码感
   textAlign(CENTER, CENTER);
   noSmooth(); 
 
@@ -58,7 +47,7 @@ function draw() {
   background(10, 10, 30); 
   let currentTextSize = 16; 
 
-  // --- 🌟 绘制字符画雨伞 ---
+  // --- 🌟 绘制字符画雨伞 (去掉加粗) ---
   let p1x = mouseX;
   let p1y = mouseY - 35; 
   let baseHalfWidth = SHIELD_RADIUS * BASE_MULTIPLIER;
@@ -67,12 +56,10 @@ function draw() {
   let p3x = mouseX + baseHalfWidth; 
 
   push();
-  let umbrellaColor = color(255, 180);
-  fill(umbrellaColor);
-  stroke(umbrellaColor); // 加上描边让字符更粗
-  strokeWeight(1.2);
+  fill(255, 180); 
+  noStroke(); // 🌟 核心修改：去掉描边厚度
   textSize(currentTextSize);
-  textStyle(BOLD);
+  // 🌟 核心修改：去掉了 textStyle(BOLD)
 
   let steps = 9; 
 
@@ -141,6 +128,7 @@ function draw() {
   }
 }
 
+// 辅助函数
 function createSplash(x, y, col) {
   for (let j = 0; j < random(SPLASH_COUNT/2, SPLASH_COUNT); j++) {
     splashes.push(new SplashParticle(x, y, col));
