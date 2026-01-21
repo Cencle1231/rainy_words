@@ -47,21 +47,26 @@ function draw() {
   background(10, 10, 30); 
   let currentTextSize = 16; 
 
-  // --- 🌟 绘制字符画雨伞 (去掉加粗) ---
+  // --- 🌟 绘制字符画雨伞 ---
+  
+  // 1. 计算三个关键坐标 (物理碰撞用)
   let p1x = mouseX;
-  let p1y = mouseY - 35; 
-  let baseHalfWidth = SHIELD_RADIUS * BASE_MULTIPLIER;
-  let baseY = mouseY + 25; 
-  let p2x = mouseX - baseHalfWidth; 
-  let p3x = mouseX + baseHalfWidth; 
+  let p1y = mouseY - 35; // 伞尖
 
+  let baseHalfWidth = SHIELD_RADIUS * BASE_MULTIPLIER;
+  let baseY = mouseY + 25; // 伞底高度
+
+  let p2x = mouseX - baseHalfWidth; // 左底角
+  let p3x = mouseX + baseHalfWidth; // 右底角
+
+  // 2. 开始绘制字符 (视觉层)
   push();
   fill(255, 180); 
-  noStroke(); // 🌟 核心修改：去掉描边厚度
-  textSize(currentTextSize);
-  // 🌟 核心修改：去掉了 textStyle(BOLD)
+  noStroke();
+  textSize(16);
+  textStyle(BOLD);
 
-  let steps = 9; 
+  let steps = 9; // 稍微增加一点密度
 
   // A. 绘制左边坡度 '/'
   for(let i = 0; i < steps; i++) {
@@ -71,23 +76,30 @@ function draw() {
     text('/', x, y);
   }
 
-  // B. 绘制右边坡度 '\'
+  // B. 绘制右边坡度 '\' (🌟 修正偏移)
+// 获取 X 轴偏移 (半个字符宽度)
   let offsetX = textWidth('\\') * 1.1;
+  // 获取 Y 轴偏移 (1个字符高度，近似等于 textSize)
   let offsetY = currentTextSize * 0.5;
+  
   for(let i = 0; i < steps; i++) {
     let t = i / steps;
     let x = lerp(p1x, p3x, t);
     let y = lerp(p1y, baseY, t);
-    text('\\', x + offsetX, y + offsetY); 
+    // 🌟 在 x 坐标上加上偏移量，让它往右挪一点
+    text('\\', x + offsetX, y+offsetY); 
   }
 
-  // C. 绘制伞尖与伞柄
+  // C. 绘制伞尖
   text('^', p1x, p1y);
-  text('\\|/', mouseX, baseY - 24); 
-  text('|', mouseX, baseY - 12); 
+
+  // D. 绘制伞柄
+  text('\\|/', mouseX, baseY-24); 
+    text('|', mouseX, baseY-12); 
+
   text('|', mouseX, baseY); 
   text('|', mouseX, baseY + 12); 
-  text('J', mouseX - 3, baseY + 26); 
+  text('J', mouseX-3, baseY + 26); 
   pop();
 
   // --- 🌧️ 雨滴逻辑 ---
@@ -217,3 +229,4 @@ function windowResized() { resizeCanvas(windowWidth, windowHeight); }
 </script>
 </body>
 </html>
+
