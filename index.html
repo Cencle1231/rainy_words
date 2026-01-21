@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>字符雨伞交互特效</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* 防止出现滚动条 */
+            background-color: #0a0a1e;
+        }
+        canvas {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+// ==========================================
+// 🎨 颜色配置
+// ==========================================
+const MY_COLORS = [
+  "#ADD8E6", // 浅蓝
+  "#87CEFA", // 淡天蓝
+  "#B0E0E6"  // 粉蓝
+];
+
+// --- 🔧 特效参数配置 ---
+const DROP_STYLE = 3; 
+const TRAIL_LENGTH = 10;    
+const DOT_GAP = 6;          
+const SPLASH_COUNT = 8;     
+const GRAVITY = 0.4;        
+const SHIELD_RADIUS = 70;   
+const BASE_MULTIPLIER = 1.3; 
+// --------------------
+
+let raindrops = [];
+let ripples = [];
+let splashes = [];
+
+function setup() {
+  createCanvas(windowWidth, windowHeight);
+  textFont('Verdana'); // 网页端 Verdana 兼容性更好且更厚实
+  textAlign(CENTER, CENTER);
+  noSmooth(); 
+
+  for(let i = 0; i < 40; i++) {
+    raindrops.push(new Raindrop(true));
+  }
+}
+
+function draw() {
+  background(10, 10, 30); 
+  let currentTextSize = 16; 
+
+  // --- 🌟 绘制字符画雨伞 ---
+  let p1x = mouseX;
+  let p1y = mouseY - 35; 
+  let baseHalfWidth = SHIELD_RADIUS * BASE_MULTIPLIER;
+  let baseY = mouseY + 25; 
+  let p2x = mouseX - baseHalfWidth; 
+  let p3x = mouseX + baseHalfWidth; 
+
+  push();
+  let umbrellaColor = color(255, 180);
+  fill(umbrellaColor);
+  stroke(umbrellaColor); // 加上描边让字符更粗
+  strokeWeight(1.2);
+  textSize(currentTextSize);
+  textStyle(BOLD);
+
+  let steps = 9; 
+
+  // A. 绘制左边坡度 '/'
+  for(let i = 0; i < steps; i++) {
+    let t = i / steps;
+    let x = lerp(p2x, p1x, t);
+    let y = lerp(baseY, p1y, t);
+    text('/', x, y);
+  }
+
+  // B. 绘制右边坡度 '\'
+  let offsetX = textWidth('\\') * 1.1;
+  let offsetY = currentTextSize * 0.5;
+  for(let i = 0; i < steps; i++) {
+    let t = i / steps;
+    let x = lerp(p1x, p3x, t);
+    let y = lerp(p1y, baseY, t);
+    text('\\', x + offsetX, y + offsetY); 
+  }
+
+  // C. 绘制伞尖与伞柄
+  text('^', p1x, p1y);
+  text('\\|/', mouseX, baseY - 24); 
+  text('|', mouseX, baseY - 12); 
+  text('|', mouseX, baseY); 
+  text('|', mouseX, baseY + 12); 
+  text('J', mouseX - 3, baseY + 26); 
+  pop();
+
+  // --- 🌧️ 雨滴逻辑 ---
+  if (random(1) < 0.8) raindrops.push(new Raindrop());
+
+  for (let i = raindrops.length - 1; i >= 0; i--) {
+    let r = raindrops[i];
+    r.update();
+    r.display();
+
+    let hitUmbrella = pointInTriangle(r.pos.x, r.pos.y, p1x, p1y, p2x, baseY, p3x, baseY);
+    if (hitUmbrella) {
+      createSplash(r.pos.x, r.pos.y - 10, r.color);
+      raindrops.splice(i, 1);
+      continue; 
+    }
+
+    if (r.pos.y > height - 15) {
+      let groundY = height - 15;
+      ripples.push(new DotRipple(r.pos.x, groundY, r.color));
+      createSplash(r.pos.x, groundY - 5, r.color);
+      raindrops.splice(i, 1);
+    }
+  }
+
+  // --- 🌊 特效绘制 ---
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    let rip = ripples[i];
+    rip.update();
+    rip.display();
+    if (rip.isDead()) ripples.splice(i, 1);
+  }
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    let s = splashes[i];
+    s.update();
+    s.display();
+    if (s.isDead()) splashes.splice(i, 1);
+  }
+}
+
+function createSplash(x, y, col) {
+  for (let j = 0; j < random(SPLASH_COUNT/2, SPLASH_COUNT); j++) {
+    splashes.push(new SplashParticle(x, y, col));
+  }
+}
+
+function triArea(x1, y1, x2, y2, x3, y3) {
+  return Math.abs((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)));
+}
+
+function pointInTriangle(px, py, x1, y1, x2, y2, x3, y3) {
+  let areaABC = triArea(x1, y1, x2, y2, x3, y3);
+  let areaPAB = triArea(px, py, x1, y1, x2, y2);
+  let areaPBC = triArea(px, py, x2, y2, x3, y3);
+  let areaPCA = triArea(px, py, x3, y3, x1, y1);
+  return Math.abs(areaABC - (areaPAB + areaPBC + areaPCA)) < 0.1;
+}
+
+class Raindrop {
+  constructor(initRandomY = false) {
+    this.pos = createVector(random(width), initRandomY ? random(height) : random(-150, -50));
+    this.color = color(random(MY_COLORS));
+    this.size = random(12, 20); 
+    this.speed = map(this.size, 12, 20, 10, 18);
+    this.angle = random(-0.05, 0.05); 
+    this.history = []; 
+    if (DROP_STYLE === 3) this.char = random(['レ', 'イ', 'ン']);
+    else this.char = '|';
+  }
+  update() {
+    this.history.push(this.pos.copy());
+    if (this.history.length > TRAIL_LENGTH) this.history.shift();
+    this.pos.y += this.speed;
+    this.pos.x += map(this.angle, -0.05, 0.05, -0.5, 0.5);
+  }
+  display() {
+    push();
+    noStroke();
+    textSize(this.size);
+    for (let i = 0; i < this.history.length; i++) {
+      let alpha = map(i, 0, this.history.length, 0, 255);
+      let c = color(this.color); c.setAlpha(alpha);
+      fill(c);
+      text(this.char, this.history[i].x, this.history[i].y);
+    }
+    pop();
+  }
+}
+
+class DotRipple {
+  constructor(x, y, col) {
+    this.pos = createVector(x, y);
+    this.color = col;
+    this.alpha = 255;  
+    this.radiusX = 5;  
+    this.aspectRatio = random(0.15, 0.35);
+  }
+  update() { this.radiusX += 2.5; this.alpha -= 4; }
+  display() {
+    let c = color(this.color); c.setAlpha(this.alpha); fill(c); noStroke();
+    let count = floor((TWO_PI * this.radiusX) / DOT_GAP);
+    for (let i = 0; i < count; i++) {
+      let angle = map(i, 0, count, 0, TWO_PI);
+      text('·', this.pos.x + cos(angle)*this.radiusX, this.pos.y + sin(angle)*this.radiusX*this.aspectRatio);
+    }
+  }
+  isDead() { return this.alpha <= 0; }
+}
+
+class SplashParticle {
+  constructor(x, y, col) {
+    this.pos = createVector(x, y);
+    this.color = col;
+    this.alpha = 255;
+    this.vel = createVector(random(-3, 3), random(-8, -4));
+  }
+  update() { this.vel.y += GRAVITY; this.pos.add(this.vel); this.alpha -= 12; }
+  display() {
+    let c = color(this.color); c.setAlpha(this.alpha); fill(c); noStroke();
+    text('·', this.pos.x, this.pos.y);
+  }
+  isDead() { return this.alpha <= 0 || this.pos.y > height + 10; }
+}
+
+function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+</script>
+</body>
+</html>
